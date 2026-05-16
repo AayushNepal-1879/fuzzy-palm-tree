@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BHU Cross-Match Interactive</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d0d0f;color:#ddd;font-family:system-ui,sans-serif;
+       display:flex;justify-content:center;padding:1.5rem 1rem}
+  #root{width:100%;max-width:1000px}
+
+  h1{font-size:15px;font-weight:600;color:#eee;letter-spacing:.03em;
+      text-align:center;margin-bottom:4px}
+  .sub{font-size:12px;color:#666;text-align:center;margin-bottom:1.2rem}
+
+  /* Telemetry */
+  .tele{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
+  .tel{background:#15151a;border:1px solid #2a2a35;border-radius:8px;padding:10px 12px}
+  .tel-lbl{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+  .tel-val{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* Universe canvases */
+  .univs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .univ-wrap{position:relative;background:#000;border:1px solid #2a2a35;border-radius:10px;overflow:hidden}
+  .univ-badge{position:absolute;top:8px;left:8px;font-size:11px;font-weight:500;
+               padding:3px 8px;border-radius:5px;z-index:2}
+  .badge-a{background:rgba(16,185,129,.18);color:#10B981;border:1px solid #10B981}
+  .badge-b{background:rgba(55,138,221,.18);color:#378ADD;border:1px solid #378ADD}
+  canvas.univ{display:block;width:100%;height:240px}
+
+  /* Graph */
+  .graph-wrap{background:#15151a;border:1px solid #2a2a35;border-radius:10px;padding:12px;margin-bottom:14px}
+  .graph-legend{display:flex;gap:18px;font-size:11px;color:#888;margin-bottom:8px;flex-wrap:wrap}
+  .leg{display:flex;align-items:center;gap:6px}
+  .leg-line{width:22px;height:2px;border-radius:2px}
+  
+  /* THIS IS THE CRITICAL FIX FOR THE EXPANDING BUG */
+  .chart-container { position: relative; height: 180px; width: 100%; }
+  canvas#graph { display: block; width: 100%; height: 100%; }
+
+  /* Controls */
+  .controls{background:#15151a;border:1px solid #2a2a35;border-radius:10px;padding:14px 16px}
+
+  /* Timeline slider */
+  .timeline-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .timeline-row label{font-size:11px;color:#666;white-space:nowrap}
+  #timeline{flex:1;height:4px;accent-color:#378ADD;cursor:pointer}
+  .frame-lbl{font-size:11px;color:#888;min-width:60px;text-align:right;
+              font-variant-numeric:tabular-nums}
+
+  /* Buttons + speed */
+  .btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{
+    font-size:13px;font-weight:500;padding:6px 14px;
+    border-radius:6px;border:1px solid #333;
+    background:#1e1e28;color:#ddd;cursor:pointer;
+    display:flex;align-items:center;gap:5px;
+    transition:background .15s,border-color .15s
+  }
+  button:hover{background:#2a2a38;border-color:#555}
+  button.active{background:#1a3a5c;border-color:#378ADD;color:#7ec8ff}
+  .sep{width:1px;height:24px;background:#2a2a35;margin:0 4px}
+  .speed-grp{display:flex;align-items:center;gap:6px;margin-left:auto}
+  .speed-grp label{font-size:11px;color:#666}
+  #speed{width:90px;accent-color:#378ADD}
+  #speed-lbl{font-size:12px;color:#aaa;min-width:28px}
+
+  /* Status dot */
+  .status{display:flex;align-items:center;gap:6px;font-size:11px;color:#666;
+           margin-top:10px}
+  .dot{width:7px;height:7px;border-radius:50%;background:#444}
+  .dot.running{background:#10B981;box-shadow:0 0 6px #10B981}
+  .dot.done{background:#378ADD}
+</style>
+</head>
+<body>
+<div id="root">
+  <h1>BHU Cross-Match · Interactive Simulation</h1>
+  <div class="sub">Universe A (Real DESI Data) vs Universe B (BHU Super-Eddington Theory)</div>
+
+  <div class="tele">
+    <div class="tel">
+      <div class="tel-lbl">Redshift z</div>
+      <div class="tel-val" id="tel-z" style="color:#aaa">2.330</div>
+    </div>
+    <div class="tel">
+      <div class="tel-lbl">Scale A (DESI)</div>
+      <div class="tel-val" id="tel-a" style="color:#10B981">0.30030</div>
+    </div>
+    <div class="tel">
+      <div class="tel-lbl">Scale B (BHU)</div>
+      <div class="tel-val" id="tel-b" style="color:#378ADD">0.30030</div>
+    </div>
+    <div class="tel">
+      <div class="tel-lbl">Deviation</div>
+      <div class="tel-val" id="tel-dev" style="color:#BA7517">0.0000%</div>
+    </div>
+  </div>
+
+  <div class="univs">
+    <div class="univ-wrap">
+      <div class="univ-badge badge-a">Universe A · DESI Empirical Data</div>
+      <canvas id="canvas-a" class="univ"></canvas>
+    </div>
+    <div class="univ-wrap">
+      <div class="univ-badge badge-b">Universe B · BHU Geometric Scaling</div>
+      <canvas id="canvas-b" class="univ"></canvas>
+    </div>
+  </div>
+
+  <div class="graph-wrap">
+    <div class="graph-legend">
+      <span class="leg"><span class="leg-line" style="background:#10B981"></span>Universe A (DESI)</span>
+      <span class="leg"><span class="leg-line" style="background:#378ADD;background:none;border-top:2px dashed #378ADD"></span>Universe B (BHU)</span>
+      <span class="leg"><span class="leg-line" style="background:#E24B4A"></span>Deviation ×10</span>
+    </div>
+    <div class="chart-container">
+      <canvas id="graph"></canvas>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="timeline-row">
+      <label>Timeline</label>
+      <input type="range" id="timeline" min="0" max="499" value="0" step="1">
+      <span class="frame-lbl" id="frame-lbl">Frame 0 / 499</span>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-rew"   title="Step back 10 frames">&#9664;&#9664; Back</button>
+      <button id="btn-prev"  title="Step back 1 frame">&#9664; Step</button>
+      <button id="btn-play"  class="active">&#9646;&#9646; Pause</button>
+      <button id="btn-next"  title="Step forward 1 frame">Step &#9654;</button>
+      <button id="btn-fwd"   title="Step forward 10 frames">Fwd &#9654;&#9654;</button>
+      <div class="sep"></div>
+      <button id="btn-reset">&#8635; Reset</button>
+
+      <div class="speed-grp">
+        <label>Speed</label>
+        <input type="range" id="speed" min="1" max="8" value="3" step="1">
+        <span id="speed-lbl">1×</span>
+      </div>
+    </div>
+
+    <div class="status">
+      <span class="dot running" id="dot"></span>
+      <span id="status-txt">Playing</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── Embedded physics data (pre-computed by Python) ──────────
+const DATA = {"aA": [0.3003, 0.301788, 0.303275, 0.304761, 0.306246, 0.307731, 0.309215, 0.310698, 0.312181, 0.313663, 0.315144, 0.316723, 0.318203, 0.319683, 0.321161, 0.322639, 0.324116, 0.325592, 0.327068, 0.328543, 0.330018, 0.33159, 0.333063, 0.334535, 0.336006, 0.337477, 0.338948, 0.340417, 0.341886, 0.343354, 0.344822, 0.346386, 0.347853, 0.349318, 0.350783, 0.352247, 0.35371, 0.355173, 0.356635, 0.358096, 0.359557, 0.361114, 0.362574, 0.364032, 0.36549, 0.366947, 0.368404, 0.36986, 0.371315, 0.37277, 0.374224, 0.375774, 0.377226, 0.378678, 0.380129, 0.38158, 0.383029, 0.384478, 0.385927, 0.387375, 0.388822, 0.390268, 0.39181, 0.393255, 0.3947, 0.396143, 0.397587, 0.399029, 0.400471, 0.401912, 0.403352, 0.404792, 0.406327, 0.407765, 0.409203, 0.41064, 0.412076, 0.413512, 0.414947, 0.416381, 0.417815, 0.419248, 0.420775, 0.422207, 0.423638, 0.425068, 0.426498, 0.427927, 0.429355, 0.430783, 0.432209, 0.433634, 0.435152, 0.436573, 0.437993, 0.439411, 0.440827, 0.442241, 0.443654, 0.445065, 0.446474, 0.447881, 0.44938, 0.450784, 0.452186, 0.453587, 0.454985, 0.456382, 0.457777, 0.459171, 0.460563, 0.461953, 0.463341, 0.46482, 0.466205, 0.467588, 0.46897, 0.470349, 0.471727, 0.473104, 0.474478, 0.475851, 0.477223, 0.478684, 0.480051, 0.481418, 0.482782, 0.484145, 0.485506, 0.486865, 0.488223, 0.489579, 0.490934, 0.492376, 0.493727, 0.495077, 0.496424, 0.49777, 0.499115, 0.500458, 0.501799, 0.503138, 0.504476, 0.505901, 0.507235, 0.508568, 0.509899, 0.511229, 0.512556, 0.513883, 0.515207, 0.51653, 0.517851, 0.519259, 0.520578, 0.521896, 0.523214, 0.52453, 0.525846, 0.52716, 0.528474, 0.529787, 0.5311, 0.532498, 0.533809, 0.535118, 0.536427, 0.537735, 0.539042, 0.540348, 0.541654, 0.542958, 0.544262, 0.545565, 0.546953, 0.548255, 0.549555, 0.550854, 0.552153, 0.553451, 0.554748, 0.556044, 0.557339, 0.558633, 0.560013, 0.561306, 0.562598, 0.563889, 0.565179, 0.566468, 0.567757, 0.569044, 0.570331, 0.571617, 0.572988, 0.574273, 0.575556, 0.576839, 0.578121, 0.579402, 0.580682, 0.581961, 0.58324, 0.584517, 0.58588, 0.587158, 0.588436, 0.589715, 0.590995, 0.592276, 0.593557, 0.594838, 0.59612, 0.597403, 0.598772, 0.600057, 0.601341, 0.602627, 0.603913, 0.6052, 0.606487, 0.607775, 0.609063, 0.610353, 0.611642, 0.613019, 0.61431, 0.615602, 0.616894, 0.618187, 0.619481, 0.620775, 0.62207, 0.623365, 0.624662, 0.626045, 0.627342, 0.62864, 0.629939, 0.631238, 0.632538, 0.633839, 0.63514, 0.636442, 0.637745, 0.639135, 0.640438, 0.641743, 0.643048, 0.644354, 0.64566, 0.646967, 0.648275, 0.649583, 0.650892, 0.652289, 0.653599, 0.65491, 0.656221, 0.657533, 0.658846, 0.66016, 0.661474, 0.662788, 0.664104, 0.665507, 0.666824, 0.668141, 0.669459, 0.670778, 0.672097, 0.673416, 0.674737, 0.676058, 0.67738, 0.67879, 0.680113, 0.681437, 0.682761, 0.684086, 0.685411, 0.686737, 0.688064, 0.689392, 0.69072, 0.692048, 0.693466, 0.694796, 0.696127, 0.697458, 0.69879, 0.700123, 0.701456, 0.70279, 0.704124, 0.705459, 0.706884, 0.70822, 0.709557, 0.710895, 0.712233, 0.713572, 0.714912, 0.716252, 0.717593, 0.718935, 0.720366, 0.721709, 0.723053, 0.724397, 0.725742, 0.727087, 0.728433, 0.72978, 0.731127, 0.732475, 0.733914, 0.735263, 0.736613, 0.737964, 0.739315, 0.740667, 0.74202, 0.743373, 0.744727, 0.746081, 0.747527, 0.748883, 0.750239, 0.751597, 0.752954, 0.754313, 0.755672, 0.757032, 0.758392, 0.759753, 0.761115, 0.762568, 0.763931, 0.765295, 0.766659, 0.768024, 0.76939, 0.770756, 0.772122, 0.773489, 0.774855, 0.776313, 0.77768, 0.779047, 0.780414, 0.781782, 0.783149, 0.784517, 0.785885, 0.787253, 0.788622, 0.790081, 0.79145, 0.792819, 0.794188, 0.795557, 0.796927, 0.798296, 0.799666, 0.801036, 0.802406, 0.803867, 0.805238, 0.806608, 0.807979, 0.80935, 0.810721, 0.812093, 0.813464, 0.814836, 0.816207, 0.817671, 0.819043, 0.820415, 0.821788, 0.823161, 0.824534, 0.825907, 0.82728, 0.828653, 0.830027, 0.831492, 0.832866, 0.83424, 0.835614, 0.836989, 0.838363, 0.839738, 0.841113, 0.842488, 0.843864, 0.845239, 0.846707, 0.848082, 0.849459, 0.850835, 0.852211, 0.853588, 0.854964, 0.856341, 0.857718, 0.859096, 0.860565, 0.861943, 0.86332, 0.864698, 0.866076, 0.867455, 0.868833, 0.870212, 0.871591, 0.87297, 0.874441, 0.87582, 0.8772, 0.87858, 0.879959, 0.88134, 0.88272, 0.8841, 0.885481, 0.886862, 0.888335, 0.889716, 0.891097, 0.892479, 0.89386, 0.895242, 0.896624, 0.898006, 0.899389, 0.900771, 0.902246, 0.903629, 0.905012, 0.906395, 0.907779, 0.909162, 0.910547, 0.911934, 0.913323, 0.914714, 0.916107, 0.917596, 0.918993, 0.920393, 0.921795, 0.923199, 0.924605, 0.926014, 0.927424, 0.928837, 0.930251, 0.931763, 0.933182, 0.934603, 0.936027, 0.937453, 0.93888, 0.940311, 0.941743, 0.943177, 0.944614, 0.946149, 0.94759, 0.949033, 0.950478, 0.951926, 0.953376, 0.954828, 0.956283, 0.957739, 0.959198, 0.960756, 0.96222, 0.963685, 0.965153, 0.966623, 0.968096, 0.96957, 0.971047, 0.972526, 0.974007, 0.97559, 0.977076, 0.978564, 0.980054, 0.981547, 0.983042, 0.98454, 0.986039, 0.987541, 0.989045, 0.990652], "aB": [0.3003, 0.301873, 0.303443, 0.305009, 0.306572, 0.308132, 0.309689, 0.311243, 0.312793, 0.314341, 0.315885, 0.31753, 0.319068, 0.320604, 0.322137, 0.323667, 0.325195, 0.326719, 0.328241, 0.32976, 0.331277, 0.332892, 0.334403, 0.335912, 0.337418, 0.338922, 0.340424, 0.341923, 0.343419, 0.344913, 0.346405, 0.347994, 0.349481, 0.350966, 0.352449, 0.353929, 0.355407, 0.356884, 0.358358, 0.35983, 0.3613, 0.362865, 0.364331, 0.365794, 0.367256, 0.368716, 0.370174, 0.37163, 0.373084, 0.374536, 0.375986, 0.377531, 0.378978, 0.380423, 0.381866, 0.383307, 0.384747, 0.386185, 0.387621, 0.389055, 0.390488, 0.39192, 0.393445, 0.394873, 0.396299, 0.397724, 0.399148, 0.40057, 0.40199, 0.403409, 0.404826, 0.406242, 0.407751, 0.409165, 0.410576, 0.411987, 0.413396, 0.414803, 0.41621, 0.417615, 0.419018, 0.420421, 0.421916, 0.423315, 0.424714, 0.426112, 0.427508, 0.428903, 0.430297, 0.431689, 0.433081, 0.434471, 0.435953, 0.437342, 0.438729, 0.440115, 0.441499, 0.442883, 0.444266, 0.445648, 0.447029, 0.448409, 0.449879, 0.451257, 0.452634, 0.45401, 0.455385, 0.456759, 0.458132, 0.459504, 0.460875, 0.462246, 0.463616, 0.465076, 0.466443, 0.46781, 0.469177, 0.470542, 0.471907, 0.47327, 0.474633, 0.475996, 0.477357, 0.478809, 0.480169, 0.481528, 0.482887, 0.484244, 0.485602, 0.486958, 0.488314, 0.489669, 0.491024, 0.492468, 0.493821, 0.495173, 0.496525, 0.497877, 0.499228, 0.500578, 0.501927, 0.503277, 0.504625, 0.506063, 0.50741, 0.508757, 0.510103, 0.511449, 0.512795, 0.51414, 0.515484, 0.516828, 0.518171, 0.519604, 0.520946, 0.522288, 0.52363, 0.524971, 0.526312, 0.527652, 0.528992, 0.530332, 0.531671, 0.533099, 0.534438, 0.535776, 0.537113, 0.538451, 0.539788, 0.541125, 0.542461, 0.543797, 0.545133, 0.546468, 0.547893, 0.549228, 0.550562, 0.551897, 0.553231, 0.554564, 0.555898, 0.557231, 0.558565, 0.559897, 0.561319, 0.562651, 0.563984, 0.565316, 0.566648, 0.567979, 0.569311, 0.570642, 0.571973, 0.573305, 0.574724, 0.576055, 0.577385, 0.578716, 0.580046, 0.581376, 0.582707, 0.584037, 0.585367, 0.586696, 0.588115, 0.589444, 0.590774, 0.592104, 0.593433, 0.594762, 0.596092, 0.597421, 0.59875, 0.60008, 0.601497, 0.602827, 0.604156, 0.605485, 0.606814, 0.608144, 0.609473, 0.610802, 0.612131, 0.613461, 0.61479, 0.616208, 0.617537, 0.618867, 0.620196, 0.621526, 0.622855, 0.624185, 0.625515, 0.626845, 0.628175, 0.629594, 0.630924, 0.632254, 0.633585, 0.634915, 0.636246, 0.637577, 0.638907, 0.640238, 0.64157, 0.64299, 0.644321, 0.645653, 0.646985, 0.648317, 0.649649, 0.650981, 0.652314, 0.653647, 0.65498, 0.656402, 0.657735, 0.659068, 0.660402, 0.661736, 0.66307, 0.664405, 0.66574, 0.667074, 0.66841, 0.669834, 0.67117, 0.672506, 0.673842, 0.675178, 0.676515, 0.677852, 0.679189, 0.680527, 0.681865, 0.683292, 0.684631, 0.685969, 0.687308, 0.688648, 0.689988, 0.691328, 0.692668, 0.694009, 0.69535, 0.696691, 0.698122, 0.699464, 0.700807, 0.70215, 0.703493, 0.704836, 0.70618, 0.707525, 0.708869, 0.710214, 0.711649, 0.712995, 0.714342, 0.715688, 0.717035, 0.718383, 0.719731, 0.721079, 0.722428, 0.723777, 0.725216, 0.726566, 0.727917, 0.729268, 0.730619, 0.731971, 0.733323, 0.734676, 0.736029, 0.737383, 0.738827, 0.740182, 0.741537, 0.742893, 0.744249, 0.745605, 0.746962, 0.74832, 0.749678, 0.751036, 0.752486, 0.753846, 0.755206, 0.756567, 0.757928, 0.759289, 0.760652, 0.762014, 0.763378, 0.764742, 0.766106, 0.767562, 0.768928, 0.770294, 0.77166, 0.773028, 0.774396, 0.775764, 0.777133, 0.778502, 0.779873, 0.781335, 0.782706, 0.784078, 0.785451, 0.786824, 0.788198, 0.789572, 0.790947, 0.792323, 0.793699, 0.795167, 0.796545, 0.797923, 0.799302, 0.800681, 0.802061, 0.803442, 0.804824, 0.806206, 0.807588, 0.809064, 0.810448, 0.811833, 0.813218, 0.814604, 0.815991, 0.817378, 0.818766, 0.820155, 0.821545, 0.823028, 0.824418, 0.82581, 0.827202, 0.828595, 0.829989, 0.831384, 0.832779, 0.834175, 0.835571, 0.837062, 0.83846, 0.839859, 0.841259, 0.842659, 0.84406, 0.845462, 0.846865, 0.848268, 0.849672, 0.851077, 0.852576, 0.853983, 0.85539, 0.856798, 0.858207, 0.859616, 0.861027, 0.862438, 0.86385, 0.865263, 0.86677, 0.868185, 0.8696, 0.871016, 0.872433, 0.87385, 0.875269, 0.876688, 0.878108, 0.879529, 0.881046, 0.882468, 0.883892, 0.885316, 0.886741, 0.888167, 0.889594, 0.891021, 0.89245, 0.893879, 0.895405, 0.896836, 0.898268, 0.899701, 0.901135, 0.90257, 0.904005, 0.905441, 0.906879, 0.908317, 0.909852, 0.911292, 0.912733, 0.914175, 0.915617, 0.917061, 0.918506, 0.919951, 0.921397, 0.922845, 0.924293, 0.925839, 0.927289, 0.92874, 0.930192, 0.931645, 0.933099, 0.934553, 0.936009, 0.937466, 0.938923, 0.940479, 0.941939, 0.9434, 0.944861, 0.946324, 0.947787, 0.949252, 0.950717, 0.952183, 0.953651, 0.955217, 0.956686, 0.958157, 0.959628, 0.961101, 0.962574, 0.964048, 0.965524, 0.967, 0.968477, 0.970054, 0.971534, 0.973014, 0.974496, 0.975979, 0.977462, 0.978947, 0.980432, 0.981919, 0.983407, 0.984995, 0.986485, 0.987976, 0.989468, 0.990961, 0.992455, 0.99395, 0.995446, 0.996943, 0.998442, 1.000041], "px": [0.06132, 0.28071, 0.29953, 0.78903, -0.15658, 0.04436, 0.18192, -0.46526, -0.17867, -0.97548, 0.30244, 0.81768, -0.7443, -0.13421, 0.05659, 0.8376, -0.19381, -0.84911, 0.88017, 0.03548, 0.20248, 0.49053, 0.62908, -0.63357, -0.28549, 0.96634, -0.57284, -0.21271, 0.85781, 0.71338, -0.42538, 0.96518, -0.90188, -0.13848, 0.32338, -0.66923, 0.07615, 0.48002, 0.45236, 0.19893, -0.32019, -0.14573, -0.52568, 0.02641, -0.7205, 0.76173, -0.06865, -0.0137, 0.78701, -0.11464, 0.07682, 0.8804, 0.08719, -0.31307, -0.42356, 0.56637, 0.67485, -0.72112, -0.6626, 0.16769, 0.72307, 0.12674, -0.541, 0.66185, -0.43716, -0.68226, 0.03731, -0.29595, 0.03894, -0.37727, -0.18719, 0.1908, -0.03023, 0.67324, -0.22292, -0.04682, 0.61624, 0.71399, 0.63426, 0.32229, 0.41824, 0.53817, 0.38859, 0.09525, 0.33537, -0.35357, -0.93789, 0.12516, -0.44677, 0.24273, 0.92157, -0.00267, 0.77329, -0.16792, 0.07498, -0.03279, -0.74872, -0.63569, 0.14405, -0.29195, 0.28581, -0.15273, -0.52448, 0.77968, -0.13843, -0.52382, 0.9296, -0.34518, -0.42385, 0.42524, -0.23812, 0.04666, 0.67455, -0.57484, -0.65171, -0.92501, 0.1689, 0.34509, 0.06265, 0.19659], "py": [-0.71442, -0.33773, -0.09818, -0.44067, 0.33176, 0.88083, -0.7126, 0.22833, 0.70065, -0.08068, -0.34422, 0.24242, 0.15675, -0.71999, 0.30447, -0.16319, -0.348, 0.20181, -0.39421, 0.70226, 0.88358, -0.44025, 0.44702, -0.18624, -0.79645, 0.16017, -0.13889, -0.14907, 0.03832, -0.46176, 0.84359, 0.05056, 0.27507, -0.69087, -0.78274, -0.64152, 0.73382, 0.46781, -0.54003, 0.20328, -0.22834, 0.61782, 0.52738, -0.11274, -0.64367, -0.62598, 0.4875, -0.8514, -0.45377, -0.30818, 0.16379, 0.15146, 0.36836, -0.7471, -0.56909, -0.14454, -0.13776, -0.40219, 0.52176, 0.62817, 0.68212, 0.79108, -0.69319, -0.05328, 0.02012, 0.65506, 0.65027, -0.91208, -0.97369, 0.35934, -0.83395, -0.91303, 0.79854, -0.04863, -0.1484, 0.13108, -0.12999, 0.17953, 0.6145, 0.65632, -0.77837, -0.54689, 0.63258, 0.63171, 0.1607, -0.92642, -0.05619, 0.10619, 0.65202, -0.61438, -0.30555, 0.56924, 0.34349, -0.87932, -0.84498, 0.62271, 0.06712, 0.70594, 0.90388, 0.3928, 0.23652, -0.84973, -0.47483, -0.31018, -0.18468, -0.78005, -0.15753, -0.00158, 0.1755, 0.88164, -0.88152, 0.71535, -0.51722, -0.59141, 0.46755, -0.31415, -0.78188, -0.49482, -0.03637, -0.42414]};
+const aA   = DATA.aA;
+const aB   = DATA.aB;
+const PX   = DATA.px;
+const PY   = DATA.py;
+const N    = aA.length;   
+
+// --- Calculate Cosmic Web Filaments Pre-Render ---
+const filaments = [];
+for(let i=0; i<PX.length; i++) {
+  for(let j=i+1; j<PX.length; j++) {
+    let d = Math.hypot(PX[i]-PX[j], PY[i]-PY[j]);
+    if(d < 0.3) {
+        filaments.push({a:i, b:j, w: 1-(d/0.3)});
+    }
+  }
+}
+
+// ── State ────────────────────────────────────────────────────
+let frame    = 0;
+let playing  = true;
+let speedMul = 1.0;
+let lastTs   = 0;
+const FPS    = 30;
+let msPerFrame = 1000 / FPS;
+let raf;
+
+const SPEED_MAP = [0.25, 0.5, 1, 1.5, 2, 3, 4, 6];
+const SPEED_LBL = ["0.25×","0.5×","1×","1.5×","2×","3×","4×","6×"];
+
+// ── Chart.js graph ───────────────────────────────────────────
+const graphCtx = document.getElementById("graph").getContext("2d");
+const BG = "#15151a";
+const chart = new Chart(graphCtx, {
+  type: "line",
+  data: {
+    labels: aA.map((_,i) => i),
+    datasets: [
+      { label:"A", data: new Array(N).fill(null),
+         borderColor:"#10B981", borderWidth:2, pointRadius:0, tension:0.3, yAxisID:"y" },
+      { label:"B", data: new Array(N).fill(null),
+         borderColor:"#378ADD", borderWidth:2, borderDash:[5,4], pointRadius:0, tension:0.3, yAxisID:"y" },
+      { label:"Dev", data: new Array(N).fill(null),
+         borderColor:"#E24B4A", borderWidth:1.5, pointRadius:0, tension:0.3, yAxisID:"y2" }
+    ]
+  },
+  options: {
+    // FIX: This stops the infinite expansion bug
+    responsive:true, maintainAspectRatio:false, animation:false,
+    plugins:{ legend:{display:false} },
+    scales:{
+      x:{ display:false },
+      y:{ min:0, max:1.35, position:"left",
+           ticks:{color:"#666",font:{size:10},maxTicksLimit:6},
+           grid:{color:"rgba(255,255,255,0.04)"},
+           title:{display:true,text:"Scale factor a(t)",color:"#666",font:{size:10}} },
+      y2:{ min:-0.5, max:10, position:"right",
+            ticks:{color:"#E24B4A",font:{size:10},maxTicksLimit:4},
+            grid:{display:false},
+            title:{display:true,text:"Dev% ×10",color:"#E24B4A",font:{size:10}} }
+    }
+  }
+});
+
+chart.data.datasets[0].data = aA.map(v => v);
+chart.data.datasets[1].data = aB.map(v => v);
+chart.data.datasets[2].data = aA.map((_,i) => +(Math.abs(aA[i]-aB[i])/aA[i]*100*10).toFixed(4));
+
+chart.data.datasets[0].borderColor = "#10B98122";
+chart.data.datasets[1].borderColor = "#378ADD22";
+chart.data.datasets[2].borderColor = "#E24B4A22";
+chart.update("none");
+
+chart.data.datasets.push(
+  { label:"A-live", data: new Array(N).fill(null),
+     borderColor:"#10B981", borderWidth:2.5, pointRadius:0, tension:0.3, yAxisID:"y" },
+  { label:"B-live", data: new Array(N).fill(null),
+     borderColor:"#378ADD", borderWidth:2.5, borderDash:[5,4], pointRadius:0, tension:0.3, yAxisID:"y" },
+  { label:"Dev-live", data: new Array(N).fill(null),
+     borderColor:"#E24B4A", borderWidth:1.8, pointRadius:0, tension:0.3, yAxisID:"y2" }
+);
+chart.update("none");
+const LA = 3, LB = 4, LD = 5; 
+
+const playheadPlugin = {
+  id:"playhead",
+  afterDraw(ch) {
+    const x = ch.scales.x.getPixelForValue(frame);
+    const {top, bottom} = ch.chartArea;
+    const ctx = ch.ctx;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom);
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+    ctx.stroke(); ctx.restore();
+  }
+};
+Chart.register(playheadPlugin);
+
+// ── Canvas Drawing Engine (Cosmic Web) ──────────────────────────
+function hexRgb(h) {
+  return parseInt(h.slice(1,3),16)+","+parseInt(h.slice(3,5),16)+","+parseInt(h.slice(5,7),16);
+}
+
+function drawUniv(id, af, col, isBHU) {
+  const cv  = document.getElementById(id);
+  const ctx = cv.getContext("2d");
+  const W   = cv.width  = cv.offsetWidth;
+  const H   = cv.height = cv.offsetHeight;
+  const cx=W/2, cy=H/2, mr=Math.min(cx,cy)*0.88;
+  ctx.clearRect(0,0,W,H);
+
+  const a_start = aA[0];
+  const sc = af;
+
+  // Background Void Glow
+  const g = ctx.createRadialGradient(cx,cy,0,cx,cy,mr*sc*1.1);
+  g.addColorStop(0,"rgba("+hexRgb(col)+",0.06)");
+  g.addColorStop(1,"rgba(0,0,0,1)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // Draw Dark Matter Filaments
+  ctx.lineWidth = 0.5;
+  filaments.forEach(f => {
+      ctx.beginPath();
+      ctx.moveTo(cx + PX[f.a]*mr*sc, cy + PY[f.a]*mr*sc);
+      ctx.lineTo(cx + PX[f.b]*mr*sc, cy + PY[f.b]*mr*sc);
+      ctx.strokeStyle = col + Math.floor(f.w * 80).toString(16).padStart(2,'0'); 
+      ctx.stroke();
+  });
+
+  // Draw Galaxy Nodes / Supermassive Black Holes
+  for (let i=0; i<PX.length; i++) {
+    let x = cx + PX[i]*mr*sc;
+    let y = cy + PY[i]*mr*sc;
+    
+    // Pseudo-random mass generation based on index so it looks natural but deterministic
+    let rad = (Math.sin(i*45.1)*0.5+0.5) * 2 + 0.8; 
+    
+    // Radial Gradient to simulate Galactic Halo/Core
+    let grad = ctx.createRadialGradient(x, y, 0, x, y, rad*3);
+    
+    if(isBHU) {
+        // BHU Universe: Nodes have piercing bright cyan cores representing the geometric engine
+        grad.addColorStop(0, '#fff');
+        grad.addColorStop(0.2, '#7ec8ff');
+        grad.addColorStop(0.6, col + 'aa');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+    } else {
+        // Standard Universe A: Typical Dark Matter Halo aesthetic
+        grad.addColorStop(0, '#fff');
+        grad.addColorStop(0.4, col + 'cc');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+    }
+    
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, rad*3, 0, 2*Math.PI);
+    ctx.fill();
+  }
+
+  // Horizon ring
+  ctx.beginPath(); ctx.arc(cx,cy,mr*sc,0,2*Math.PI);
+  ctx.strokeStyle=col+"33"; ctx.lineWidth=1.5; ctx.stroke();
+
+  // Redshift label
+  const z = (1/af)-1;
+  ctx.font="bold 12px system-ui"; ctx.fillStyle=col;
+  ctx.fillText("z = "+z.toFixed(3), 12, H-12);
+
+  // Progress arc (top-right)
+  const prog = Math.min((af-a_start)/(1.0-a_start), 1);
+  ctx.beginPath();
+  ctx.arc(W-20,H-20,10,0,2*Math.PI);
+  ctx.strokeStyle=col+"22"; ctx.lineWidth=3; ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W-20,H-20,10,-Math.PI/2,-Math.PI/2+2*Math.PI*prog);
+  ctx.strokeStyle=col+"dd"; ctx.lineWidth=3; ctx.stroke();
+}
+
+// ── Render a specific frame ───────────────────────────────────
+function renderFrame(f) {
+  f = Math.max(0, Math.min(N-1, Math.round(f)));
+  frame = f;
+
+  const vA  = aA[f];
+  const vB  = aB[f];
+  const dev = Math.abs(vA-vB)/vA*100;
+  const z   = (1/vA)-1;
+
+  document.getElementById("tel-z").textContent   = z.toFixed(3);
+  document.getElementById("tel-a").textContent   = vA.toFixed(5);
+  document.getElementById("tel-b").textContent   = vB.toFixed(5);
+  const devEl = document.getElementById("tel-dev");
+  devEl.textContent = dev.toFixed(4)+"%";
+  devEl.style.color = dev<0.5?"#10B981":dev<2?"#BA7517":"#E24B4A";
+
+  // Pass true to the second canvas to trigger the BHU galaxy rendering style
+  drawUniv("canvas-a", vA, "#10B981", false);
+  drawUniv("canvas-b", vB, "#378ADD", true);
+
+  const liveA = new Array(N).fill(null);
+  const liveB = new Array(N).fill(null);
+  const liveD = new Array(N).fill(null);
+  for (let i=0; i<=f; i++) {
+    liveA[i] = aA[i];
+    liveB[i] = aB[i];
+    liveD[i] = +(Math.abs(aA[i]-aB[i])/aA[i]*100*10).toFixed(4);
+  }
+  chart.data.datasets[LA].data = liveA;
+  chart.data.datasets[LB].data = liveB;
+  chart.data.datasets[LD].data = liveD;
+  chart.update("none");
+
+  const slider = document.getElementById("timeline");
+  slider.value = f;
+  document.getElementById("frame-lbl").textContent = "Frame "+f+" / "+(N-1);
+}
+
+// ── Animation loop ────────────────────────────────────────────
+function tick(ts) {
+  if (!playing) { raf=null; return; }
+  const elapsed = ts - lastTs;
+  if (elapsed >= msPerFrame) {
+    lastTs = ts;
+    if (frame >= N-1) {
+      playing = false;
+      setPlayState(false, true);
+      raf=null; return;
+    }
+    renderFrame(frame + 1);
+  }
+  raf = requestAnimationFrame(tick);
+}
+
+function startPlay() {
+  if (!playing) {
+    playing = true;
+    lastTs  = 0;
+    raf = requestAnimationFrame(tick);
+  }
+}
+
+function pausePlay() {
+  playing = false;
+  if (raf) { cancelAnimationFrame(raf); raf=null; }
+}
+
+function setPlayState(isPlaying, done=false) {
+  const btn = document.getElementById("btn-play");
+  const dot = document.getElementById("dot");
+  const txt = document.getElementById("status-txt");
+  if (done) {
+    btn.innerHTML = "&#9654; Play";
+    btn.classList.remove("active");
+    dot.className="dot done"; txt.textContent="Complete";
+  } else if (isPlaying) {
+    btn.innerHTML = "&#9646;&#9646; Pause";
+    btn.classList.add("active");
+    dot.className="dot running"; txt.textContent="Playing";
+  } else {
+    btn.innerHTML = "&#9654; Play";
+    btn.classList.remove("active");
+    dot.className="dot"; txt.textContent="Paused";
+  }
+}
+
+// ── Controls ──────────────────────────────────────────────────
+document.getElementById("btn-play").addEventListener("click", () => {
+  if (frame >= N-1 && !playing) {
+    renderFrame(0); startPlay(); setPlayState(true);
+  } else if (playing) {
+    pausePlay(); setPlayState(false);
+  } else {
+    startPlay(); setPlayState(true);
+  }
+});
+
+document.getElementById("btn-prev").addEventListener("click", () => {
+  pausePlay(); setPlayState(false);
+  renderFrame(frame - 1);
+});
+
+document.getElementById("btn-next").addEventListener("click", () => {
+  pausePlay(); setPlayState(false);
+  renderFrame(frame + 1);
+});
+
+document.getElementById("btn-rew").addEventListener("click", () => {
+  pausePlay(); setPlayState(false);
+  renderFrame(frame - 10);
+});
+
+document.getElementById("btn-fwd").addEventListener("click", () => {
+  pausePlay(); setPlayState(false);
+  renderFrame(frame + 10);
+});
+
+document.getElementById("btn-reset").addEventListener("click", () => {
+  pausePlay(); setPlayState(false);
+  renderFrame(0);
+});
+
+document.getElementById("timeline").addEventListener("input", e => {
+  pausePlay(); setPlayState(false);
+  renderFrame(parseInt(e.target.value));
+});
+
+document.getElementById("speed").addEventListener("input", e => {
+  const idx     = parseInt(e.target.value) - 1;
+  speedMul      = SPEED_MAP[idx];
+  msPerFrame    = 1000 / FPS / speedMul;
+  document.getElementById("speed-lbl").textContent = SPEED_LBL[idx];
+});
+
+document.addEventListener("keydown", e => {
+  if (e.code==="Space") {
+    e.preventDefault();
+    document.getElementById("btn-play").click();
+  } else if (e.code==="ArrowLeft") {
+    e.preventDefault();
+    if (e.shiftKey) document.getElementById("btn-rew").click();
+    else            document.getElementById("btn-prev").click();
+  } else if (e.code==="ArrowRight") {
+    e.preventDefault();
+    if (e.shiftKey) document.getElementById("btn-fwd").click();
+    else            document.getElementById("btn-next").click();
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────
+renderFrame(0);
+raf = requestAnimationFrame(tick);
+</script>
+</body>
+</html>
