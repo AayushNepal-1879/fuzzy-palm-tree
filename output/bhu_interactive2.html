@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+:root{
+  --bg:#05050c;--panel:#09091a;--bdr:#14142a;--bdr2:#1e1e38;
+  --text:#9898b8;--dim:#363658;--hi:#eeeef8;
+  --a:#10c98a;--b:#4a9eff;--dev:#ff6a3d;--gold:#f0c040;
+  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;--r:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;background:var(--bg);color:var(--text);font-family:var(--sans)}
+#root{width:100%;max-width:1100px;margin:0 auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.hdr{text-align:center}
+.hdr h1{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--hi);letter-spacing:.15em;text-transform:uppercase}
+.hdr .sub{font-size:10px;color:var(--dim);margin-top:3px}
+.tele{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.tel{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r);padding:7px 10px;text-align:center;position:relative;overflow:hidden}
+.tel-bar{position:absolute;top:0;left:0;right:0;height:2px}
+.tel-lbl{font-family:var(--mono);font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.10em;margin-bottom:4px}
+.tel-val{font-family:var(--mono);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.univs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.univ-wrap{position:relative;background:#000;border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;height:210px}
+.univ-badge{position:absolute;top:7px;left:7px;font-family:var(--mono);font-size:9px;font-weight:700;padding:3px 8px;border-radius:5px;z-index:3;letter-spacing:.06em;text-transform:uppercase;pointer-events:none}
+.badge-std{background:rgba(136,135,128,.15);color:#aaa;border:1px solid #666}
+.badge-bhu{background:rgba(74,158,255,.15);color:var(--b);border:1px solid rgba(74,158,255,.4)}
+.univ-sub{position:absolute;bottom:7px;left:8px;font-family:var(--mono);font-size:8px;z-index:3;pointer-events:none;line-height:1.7}
+canvas.univ{display:block;width:100%;height:100%}
+.graph-wrap{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r);padding:8px 10px}
+.graph-legend{display:flex;gap:14px;justify-content:center;margin-bottom:6px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--dim);font-family:var(--mono)}
+.leg-line{width:18px;height:2px;border-radius:1px}
+.leg-dot{width:7px;height:7px;border-radius:50%}
+.chart-container{position:relative;height:180px}
+canvas#graph{display:block;width:100%;height:100%}
+.controls{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 14px}
+.timeline-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.timeline-row label{font-family:var(--mono);font-size:8px;color:var(--dim);white-space:nowrap;text-transform:uppercase;letter-spacing:.08em}
+#timeline{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--bdr2);cursor:pointer;outline:none}
+#timeline::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--b);cursor:pointer}
+.frame-lbl{font-family:var(--mono);font-size:9px;color:var(--dim);min-width:76px;text-align:right;font-variant-numeric:tabular-nums}
+.btn-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+button{font-family:var(--mono);font-size:10px;font-weight:700;padding:5px 11px;border-radius:6px;border:1px solid var(--bdr2);background:#0c0c1e;color:var(--text);cursor:pointer;transition:all .12s;letter-spacing:.05em;text-transform:uppercase}
+button:hover{background:#14142e;border-color:#2a2a48;color:var(--hi)}
+button.active{background:#0a1e3c;border-color:var(--b);color:#7ec8ff}
+.sep{width:1px;height:20px;background:var(--bdr2);margin:0 2px}
+.speed-grp{display:flex;align-items:center;gap:7px;margin-left:auto}
+.speed-grp label{font-family:var(--mono);font-size:8px;color:var(--dim);text-transform:uppercase}
+#speed{width:75px;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--bdr2);cursor:pointer;outline:none}
+#speed::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--gold);cursor:pointer}
+#speed-lbl{font-family:var(--mono);font-size:10px;color:var(--gold);min-width:30px}
+.status-row{display:flex;align-items:center;gap:8px;margin-top:7px}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--dim);transition:background .3s}
+.sdot.run{background:var(--a);box-shadow:0 0 6px var(--a)}
+.sdot.done{background:var(--b)}
+.stxt{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.kb{margin-left:auto;font-family:var(--mono);font-size:8px;color:var(--dim);opacity:.4}
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="hdr">
+    <h1>BHU Track II · Episodic Accretion Simulation</h1>
+    <div class="sub">Standard Eddington Limit vs BHU Super-Eddington Episodic Framework · JWST LRD Cross-Match</div>
+  </div>
+
+  <div class="tele">
+    <div class="tel">
+      <div class="tel-bar" style="background:linear-gradient(90deg,transparent,#666,transparent)"></div>
+      <div class="tel-lbl">Redshift z</div>
+      <div class="tel-val" id="tel-z" style="color:#ccc">15.00</div>
+    </div>
+    <div class="tel">
+      <div class="tel-bar" style="background:linear-gradient(90deg,transparent,var(--a),transparent)"></div>
+      <div class="tel-lbl">Std Mass (M☉)</div>
+      <div class="tel-val" id="tel-std" style="color:var(--a)">1.00e+4</div>
+    </div>
+    <div class="tel">
+      <div class="tel-bar" style="background:linear-gradient(90deg,transparent,var(--b),transparent)"></div>
+      <div class="tel-lbl">BHU Mass (M☉)</div>
+      <div class="tel-val" id="tel-bhu" style="color:var(--b)">1.00e+4</div>
+    </div>
+    <div class="tel">
+      <div class="tel-bar" style="background:linear-gradient(90deg,transparent,var(--dev),transparent)"></div>
+      <div class="tel-lbl">JWST Cross-Match Δ</div>
+      <div class="tel-val" id="tel-dev" style="color:#E24B4A;text-shadow:0 0 8px rgba(226,75,74,.4)">0.00%</div>
+    </div>
+  </div>
+
+  <div class="univs">
+    <div class="univ-wrap">
+      <div class="univ-badge badge-std">Standard Limit</div>
+      <div class="univ-sub" id="sub-std" style="color:rgba(170,170,170,0.7)"></div>
+      <canvas id="canvas-std" class="univ" aria-label="Standard Eddington black hole with sparse bright orange accretion disk"></canvas>
+    </div>
+    <div class="univ-wrap">
+      <div class="univ-badge badge-bhu">BHU Episodic Framework</div>
+      <div class="univ-sub" id="sub-bhu" style="color:rgba(74,158,255,0.7)"></div>
+      <canvas id="canvas-bhu" class="univ" aria-label="BHU super-Eddington black hole with dense dim blue accretion disk and relativistic jet"></canvas>
+    </div>
+  </div>
+
+  <div class="graph-wrap">
+    <div class="graph-legend">
+      <div class="leg"><div class="leg-line" style="background:#777;border-top:2px dashed #777;background:none"></div>Standard Limit</div>
+      <div class="leg"><div class="leg-line" style="background:var(--b)"></div>BHU Episodic</div>
+      <div class="leg"><div class="leg-dot" style="background:#E24B4A"></div>JWST LRDs</div>
+      <div class="leg"><div class="leg-line" style="background:var(--gold)"></div>Host Gas %</div>
+    </div>
+    <div class="chart-container">
+      <canvas id="graph" role="img" aria-label="Log-scale chart of black hole mass vs redshift z=15 to z=4, standard Eddington dashed gray, BHU episodic blue, JWST LRD red circles"></canvas>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="timeline-row">
+      <label>Cosmic Time</label>
+      <input type="range" id="timeline" min="0" max="199" value="0" step="1">
+      <span class="frame-lbl" id="frame-lbl">t = 271 Myr</span>
+    </div>
+    <div class="btn-row">
+      <button id="btn-rew">⏮ ×10</button>
+      <button id="btn-prev">◀ Step</button>
+      <button id="btn-play" class="active">⏸ <span id="play-lbl">Pause</span></button>
+      <button id="btn-next">Step ▶</button>
+      <button id="btn-fwd">×10 ⏭</button>
+      <div class="sep"></div>
+      <button id="btn-reset">↺ Reset</button>
+      <div class="speed-grp">
+        <label>Speed</label>
+        <input type="range" id="speed" min="1" max="8" value="3" step="1">
+        <span id="speed-lbl">1×</span>
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="sdot run" id="sdot"></div>
+      <span class="stxt" id="stxt">Playing</span>
+      <span class="kb">Space · ← → · Shift+← Shift+→</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+/* ── Seeded PRNG ──────────────────────────────────── */
+function mulberry32(seed){
+  return function(){
+    seed|=0;seed=seed+0x6D2B79F5|0;
+    let t=Math.imul(seed^seed>>>15,1|seed);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return((t^t>>>14)>>>0)/4294967296;
+  };
+}
+
+/* ── Age helper ───────────────────────────────────── */
+function zToAgeYr(z){
+  const H0=67.4*3.24078e-20,Om=0.315,Ol=0.685;
+  const a=1/(1+z),term=Math.sqrt(Ol/Om)*Math.pow(a,1.5);
+  const t_sec=(2/(3*H0*Math.sqrt(Ol)))*Math.log(term+Math.sqrt(1+term*term));
+  return t_sec/(365.25*24*3600);
+}
+function ageToZ(t){
+  let lo=0,hi=30;
+  for(let i=0;i<32;i++){const m=(lo+hi)/2;zToAgeYr(m)<t?hi=m:lo=m;}
+  return(lo+hi)/2;
+}
+
+/* ── Physics ──────────────────────────────────────── */
+const FRAMES=200;
+const Z_START=15.0,Z_END=4.0;
+const t_seed=zToAgeYr(Z_START),t_end=zToAgeYr(Z_END);
+const dt_frame=(t_end-t_seed)/(FRAMES-1);
+
+const z_array=[],m_bhu_array=[],m_std_array=[],gas_array=[],age_array=[];
+let M_bh=1e4,M_gas=4e9,M_std=1e4;
+
+const mdot_peak=800.0,duty_cycle=100.0/30e6,t_Edd=450e6,mass_loading=18.0;
+let r_tr=Math.max(1.0,6.75*mdot_peak);
+let eta=0.057*(Math.log(r_tr)/(2.0*mdot_peak))*1.3;
+eta=Math.max(1e-4,Math.min(eta,0.057));
+
+for(let f=0;f<FRAMES;f++){
+  const current_t=t_seed+f*dt_frame;
+  z_array.push(ageToZ(current_t));
+  age_array.push(current_t);
+  m_bhu_array.push(M_bh);
+  m_std_array.push(M_std);
+  gas_array.push(M_gas);
+
+  const dt=dt_frame/100;
+  for(let s=0;s<100;s++){
+    const gas_frac=Math.max(0,M_gas/4e9);
+    const mdot_eff=mdot_peak*duty_cycle*gas_frac;
+    let dM_dt=((1.0-eta)/eta)*(mdot_eff*M_bh/t_Edd);
+    let dM_gas_dt=0;
+    if(M_gas>1e3){dM_gas_dt=-dM_dt*(1.0+mass_loading);}
+    else{dM_dt=0;}
+    M_bh+=dM_dt*dt;
+    M_gas+=dM_gas_dt*dt;
+    M_std+=(M_std/45e6)*0.1*dt;
+  }
+}
+
+const M_BHU_MAX=Math.max(...m_bhu_array);
+const M_STD_MAX=Math.max(...m_std_array);
+
+/* JWST data & Continuous Interpolation */
+const jwst_data=[{z:10.0,m:8e5},{z:8.5,m:2e6},{z:6.5,m:3e7},{z:4.5,m:5e8}];
+const emp_pts = [
+    {z: 15.0, logM: 4.0}, 
+    {z: 10.0, logM: Math.log10(8e5)},
+    {z: 8.5, logM: Math.log10(2e6)},
+    {z: 6.5, logM: Math.log10(3e7)},
+    {z: 4.5, logM: Math.log10(5e8)},
+    {z: 3.0, logM: Math.log10(5e8)} 
+];
+
+function getEmpiricalMass(z_current) {
+    for(let i=0; i<emp_pts.length-1; i++) {
+        if(z_current <= emp_pts[i].z && z_current >= emp_pts[i+1].z) {
+            let z1 = emp_pts[i].z, m1 = emp_pts[i].logM;
+            let z2 = emp_pts[i+1].z, m2 = emp_pts[i+1].logM;
+            let t_interp = (z_current - z1) / (z2 - z1);
+            let logM = m1 + t_interp * (m2 - m1);
+            return Math.pow(10, logM);
+        }
+    }
+    return Math.pow(10, emp_pts[emp_pts.length-1].logM);
+}
+
+/* ── Seeded particles ─────────────────────────────── */
+const rngStar=mulberry32(0xF00DCAFE);
+const STARS=Array.from({length:120},()=>({
+  x:rngStar(),y:rngStar(),r:0.2+rngStar()*0.6,
+  a:0.04+rngStar()*0.28,ph:rngStar()*Math.PI*2
+}));
+function makeDisk(seed,n){
+  const rng=mulberry32(seed);
+  return Array.from({length:n},()=>({
+    angle:rng()*Math.PI*2,ring:0.5+rng()*0.45,
+    speed:0.008+rng()*0.012,size:0.4+rng()*1.0
+  }));
+}
+const DISK_STD=makeDisk(0xAABBCC11,220);
+const DISK_BHU=makeDisk(0x99887766,420);
+
+/* ── Draw BH ──────────────────────────────────────── */
+let gTick=0,_frame=0;
+
+function drawBH(id,mass,refMax,diskParticles,isBHU){
+  const cv=document.getElementById(id);
+  const ctx=cv.getContext('2d');
+  const W=cv.width=cv.offsetWidth,H=cv.height=cv.offsetHeight;
+  ctx.clearRect(0,0,W,H);
+  const cx=W/2,cy=H/2;
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+
+  /* Stars */
+  for(const s of STARS){
+    const tw=0.5+0.5*Math.sin(s.ph+gTick*0.018);
+    ctx.beginPath();ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${(s.a*tw).toFixed(3)})`;ctx.fill();
+  }
+
+  /* BH size */
+  const logN=Math.max(0.02,(Math.log10(Math.max(mass,1e4))-4)/(Math.log10(Math.max(refMax,1e5))-4+0.001));
+  const maxR=Math.min(cx,cy)*0.28;
+  const bhR=Math.max(4,logN*maxR);
+  const diskOuter=bhR*(isBHU?3.8:5.5);
+  const diskInner=bhR*1.30;
+  const tilt=0.28;
+
+  /* Outer corona/glow */
+  if(!isBHU){
+    const cg=ctx.createRadialGradient(cx,cy,bhR*0.8,cx,cy,diskOuter*1.5);
+    cg.addColorStop(0,'rgba(255,200,80,0.22)');
+    cg.addColorStop(0.35,'rgba(255,150,40,0.10)');
+    cg.addColorStop(0.7,'rgba(180,80,10,0.04)');
+    cg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(cx,cy,diskOuter*1.5,0,Math.PI*2);
+    ctx.fillStyle=cg;ctx.fill();
+  }else{
+    const cg=ctx.createRadialGradient(cx,cy,bhR*0.9,cx,cy,diskOuter*0.9);
+    cg.addColorStop(0,'rgba(80,120,255,0.18)');
+    cg.addColorStop(0.5,'rgba(40,70,200,0.07)');
+    cg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(cx,cy,diskOuter*0.9,0,Math.PI*2);
+    ctx.fillStyle=cg;ctx.fill();
+  }
+
+  /* Disk rings */
+  ctx.save();ctx.translate(cx,cy);ctx.scale(1,tilt);
+  if(!isBHU){
+    const nR=5;
+    for(let ri=0;ri<nR;ri++){
+      const frac=ri/(nR-1),rr=diskInner+(diskOuter-diskInner)*frac;
+      ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);
+      ctx.strokeStyle=`hsla(${30+frac*30},100%,72%,${0.55-frac*0.38})`;
+      ctx.lineWidth=2.5-frac*1.8;ctx.stroke();
+    }
+    ctx.beginPath();ctx.arc(0,0,diskInner*1.05,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,240,190,0.70)';ctx.lineWidth=1.5;ctx.stroke();
+  }else{
+    const nR=9;
+    for(let ri=0;ri<nR;ri++){
+      const frac=ri/(nR-1),rr=diskInner+(diskOuter-diskInner)*frac;
+      ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);
+      ctx.strokeStyle=`hsla(${210+frac*20},90%,45%,${0.45-frac*0.30})`;
+      ctx.lineWidth=5.5-frac*3.5;ctx.stroke();
+    }
+    ctx.beginPath();ctx.arc(0,0,diskInner*1.02,0,Math.PI*2);
+    ctx.strokeStyle='rgba(100,150,255,0.55)';ctx.lineWidth=3;ctx.stroke();
+  }
+  ctx.restore();
+
+  /* Disk particles */
+  ctx.save();ctx.translate(cx,cy);
+  for(const p of diskParticles){
+    const angle=p.angle+gTick*p.speed;
+    const rDisk=diskInner+(diskOuter-diskInner)*p.ring;
+    const px=Math.cos(angle)*rDisk,py=Math.sin(angle)*rDisk*tilt;
+    if(py>bhR*0.5)continue;
+    let col;
+    if(!isBHU){
+      const alpha=0.55+0.30*Math.sin(angle*3+gTick*0.04);
+      const br=Math.floor(180+70*Math.sin(angle+gTick*0.05));
+      col=`rgba(255,${br},80,${alpha.toFixed(2)})`;
+    }else{
+      const alpha=0.30+0.18*Math.sin(angle*5+gTick*0.06);
+      const bs=Math.floor(100+80*p.ring);
+      col=`rgba(60,${bs},255,${alpha.toFixed(2)})`;
+    }
+    ctx.beginPath();ctx.arc(px,py,p.size,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.fill();
+  }
+  ctx.restore();
+
+  /* Photon ring */
+  ctx.save();ctx.translate(cx,cy);ctx.scale(1,tilt);
+  ctx.beginPath();ctx.arc(0,0,bhR*1.18,0,Math.PI*2);
+  ctx.strokeStyle=isBHU?'rgba(150,190,255,0.65)':'rgba(255,230,130,0.80)';
+  ctx.lineWidth=isBHU?1.0:1.5;ctx.stroke();
+  ctx.restore();
+
+  /* Event horizon */
+  const eg=ctx.createRadialGradient(cx,cy,0,cx,cy,bhR);
+  eg.addColorStop(0,'#000');eg.addColorStop(0.75,'#000');
+  eg.addColorStop(1,isBHU?'rgba(10,20,60,0.95)':'rgba(30,10,0,0.90)');
+  ctx.beginPath();ctx.arc(cx,cy,bhR,0,Math.PI*2);
+  ctx.fillStyle=eg;ctx.fill();
+
+  /* Relativistic jet (BHU only) */
+  if(isBHU){
+    const jLen=bhR*3.8,jW=bhR*0.22;
+    for(const side of[-1,1]){
+      const jg=ctx.createLinearGradient(cx,cy,cx,cy+side*jLen);
+      jg.addColorStop(0,'rgba(120,180,255,0.45)');
+      jg.addColorStop(0.6,'rgba(80,130,255,0.15)');
+      jg.addColorStop(1,'rgba(40,80,255,0)');
+      ctx.save();ctx.translate(cx,cy);
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-jW,side*jLen);ctx.lineTo(jW,side*jLen);
+      ctx.closePath();ctx.fillStyle=jg;ctx.fill();ctx.restore();
+    }
+  }
+
+  /* HUD */
+  const gasPct=Math.max(0,gas_array[_frame]/4e9*100);
+  document.getElementById(isBHU?'sub-bhu':'sub-std').innerHTML=
+    `Mass = ${mass.toExponential(2)} M&#9737;<br>`+
+    (isBHU?`Gas = ${gasPct.toFixed(1)}%`:`z = ${z_array[_frame].toFixed(2)}`);
+}
+
+/* ── Chart (exact structure from reference code) ───── */
+const graphCtx=document.getElementById('graph').getContext('2d');
+const chart=new Chart(graphCtx,{
+  type:'scatter',
+  data:{
+    datasets:[
+      /* 0 - Standard live (builds progressively) */
+      {label:'Standard Limit',data:[],
+       borderColor:'#777',borderDash:[5,5],borderWidth:2,
+       pointRadius:0,showLine:true},
+      /* 1 - BHU live (builds progressively) */
+      {label:'BHU Episodic Framework',data:[],
+       borderColor:'#378ADD',borderWidth:3,
+       pointRadius:0,showLine:true},
+      /* 2 - JWST static scatter (always visible) */
+      {label:'JWST LRDs',
+       data:jwst_data.map(d=>({x:d.z,y:d.m})),
+       backgroundColor:'#E24B4A',pointRadius:7,
+       pointBorderColor:'#ff8870',pointBorderWidth:1,
+       showLine:false},
+      /* 3 - Gas % on secondary axis */
+      {label:'Host Gas %',data:[],
+       borderColor:'rgba(240,192,64,0.7)',borderWidth:1.5,
+       pointRadius:0,showLine:true,yAxisID:'y2'}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,animation:false,
+    scales:{
+      x:{
+        type:'linear',
+        reverse:true,
+        min:3.5,max:15.5,
+        title:{display:true,text:'Redshift z',color:'#888',font:{weight:'bold',size:10}},
+        ticks:{color:'#666',font:{size:9}},
+        grid:{color:'#1a1a2a'}
+      },
+      y:{
+        type:'logarithmic',
+        min:5e3,max:5e9,
+        title:{display:true,text:'Black Hole Mass (M_sun)',color:'#888',font:{weight:'bold',size:10}},
+        ticks:{color:'#666',font:{size:9},
+          callback:v=>{const e=Math.round(Math.log10(v));return v===Math.pow(10,e)?'10^'+e:'';}},
+        grid:{color:'#1a1a2a'}
+      },
+      y2:{
+        type:'linear',min:0,max:115,
+        position:'right',
+        title:{display:true,text:'Host Gas %',color:'rgba(240,192,64,0.6)',font:{size:9}},
+        ticks:{color:'rgba(240,192,64,0.5)',font:{size:9}},
+        grid:{display:false}
+      }
+    },
+    plugins:{
+      legend:{display:false}, // Hidden to prevent duplicate legend since HTML legend exists
+      tooltip:{backgroundColor:'#09091a',borderColor:'#14142a',borderWidth:1,
+        titleColor:'#666',bodyColor:'#888',
+        titleFont:{size:9},bodyFont:{size:9}}
+    }
+  },
+  plugins:[{id:'ph',afterDraw(ch){
+    const x=ch.scales.x.getPixelForValue(z_array[_frame]);
+    const{top,bottom}=ch.chartArea,c=ch.ctx;
+    c.save();c.beginPath();c.moveTo(x,top);c.lineTo(x,bottom);
+    c.strokeStyle='rgba(255,255,255,0.18)';c.lineWidth=1.2;c.setLineDash([3,3]);c.stroke();c.restore();
+  }}]
+});
+
+/* ── Render frame ─────────────────────────────────── */
+function render(f){
+  f=Math.max(0,Math.min(FRAMES-1,Math.round(f)));
+  frame=f;_frame=f;gTick++;
+
+  const z=z_array[f],age=age_array[f];
+  const mBhu=m_bhu_array[f],mStd=m_std_array[f],gas=gas_array[f];
+  const gasPct=Math.max(0,gas/4e9*100);
+
+  document.getElementById('tel-z').textContent=z.toFixed(2);
+  document.getElementById('tel-std').textContent=mStd.toExponential(2);
+  document.getElementById('tel-bhu').textContent=mBhu.toExponential(2);
+
+  /* FIXED: Continuous JWST cross-match interpolation */
+  const devEl=document.getElementById('tel-dev');
+  const mEmp = getEmpiricalMass(z);
+  const dev = Math.abs(mBhu - mEmp) / mEmp * 100;
+  
+  devEl.textContent=dev.toFixed(2)+'%';
+  devEl.style.color=dev<50?'var(--a)':dev<200?'var(--gold)':'#E24B4A';
+
+  drawBH('canvas-std',mStd,M_STD_MAX,DISK_STD,false);
+  drawBH('canvas-bhu',mBhu,M_BHU_MAX,DISK_BHU,true);
+
+  /* Build progressive live data */
+  const liveStd=[],liveBhu=[],liveGas=[];
+  for(let i=0;i<=f;i++){
+    liveStd.push({x:z_array[i],y:m_std_array[i]});
+    liveBhu.push({x:z_array[i],y:m_bhu_array[i]});
+    liveGas.push({x:z_array[i],y:Math.max(0,gas_array[i]/4e9*100)});
+  }
+  chart.data.datasets[0].data=liveStd;
+  chart.data.datasets[1].data=liveBhu;
+  chart.data.datasets[3].data=liveGas;
+  chart.update('none');
+
+  document.getElementById('timeline').value=f;
+  document.getElementById('frame-lbl').textContent=`t = ${(age/1e6).toFixed(0)} Myr  (z=${z.toFixed(2)})`;
+}
+
+/* ── Animation ────────────────────────────────────── */
+let frame=0,playing=true,raf=null,lastTs=0;
+const BASE_FPS=18;let msPerFrame=1000/BASE_FPS;
+const SMAP=[0.25,0.5,1,1.5,2,3,4,6];
+const SLBL=['¼×','½×','1×','1.5×','2×','3×','4×','6×'];
+
+function setPS(isP,done=false){
+  const dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
+  const pl=document.getElementById('play-lbl'),btn=document.getElementById('btn-play');
+  if(done){pl.textContent='Play';btn.classList.remove('active');
+    dot.className='sdot done';txt.textContent='Complete';
+  }else if(isP){pl.textContent='Pause';btn.classList.add('active');
+    dot.className='sdot run';txt.textContent='Playing';
+  }else{pl.textContent='Play';btn.classList.remove('active');
+    dot.className='sdot';txt.textContent='Paused';
+  }
+}
+
+function animLoop(ts){
+  if(!playing){raf=null;return;}
+  if(lastTs===0)lastTs=ts;
+  if(ts-lastTs>=msPerFrame){
+    lastTs=ts;
+    if(frame>=FRAMES-1){setPS(false,true);raf=null;return;}
+    render(frame+1);
+  }
+  raf=requestAnimationFrame(animLoop);
+}
+function startPlay(){if(playing)return;playing=true;lastTs=0;raf=requestAnimationFrame(animLoop);}
+function pausePlay(){playing=false;if(raf){cancelAnimationFrame(raf);raf=null;}}
+
+document.getElementById('btn-play').addEventListener('click',()=>{
+  if(frame>=FRAMES-1&&!playing)render(0);
+  if(playing){pausePlay();setPS(false);}else{startPlay();setPS(true);}
+});
+document.getElementById('btn-reset').addEventListener('click',()=>{pausePlay();setPS(false);render(0);});
+document.getElementById('btn-prev').addEventListener('click',()=>{pausePlay();setPS(false);render(frame-1);});
+document.getElementById('btn-next').addEventListener('click',()=>{pausePlay();setPS(false);render(frame+1);});
+document.getElementById('btn-rew').addEventListener('click',()=>{pausePlay();setPS(false);render(frame-10);});
+document.getElementById('btn-fwd').addEventListener('click',()=>{pausePlay();setPS(false);render(frame+10);});
+document.getElementById('timeline').addEventListener('input',e=>{pausePlay();setPS(false);render(parseInt(e.target.value));});
+
+document.getElementById('speed').addEventListener('input',e=>{
+  const idx=parseInt(e.target.value)-1;
+  msPerFrame=1000/BASE_FPS/SMAP[idx];
+  document.getElementById('speed-lbl').textContent=SLBL[idx];
+  lastTs=0;
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.code==='Space'){e.preventDefault();document.getElementById('btn-play').click();}
+  else if(e.code==='ArrowLeft'){e.preventDefault();(e.shiftKey?document.getElementById('btn-rew'):document.getElementById('btn-prev')).click();}
+  else if(e.code==='ArrowRight'){e.preventDefault();(e.shiftKey?document.getElementById('btn-fwd'):document.getElementById('btn-next')).click();}
+});
+
+render(0);setPS(true);raf=requestAnimationFrame(animLoop);
+</script>
+</body>
+</html>
