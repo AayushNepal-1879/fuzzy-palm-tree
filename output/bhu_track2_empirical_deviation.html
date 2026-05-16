@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BHU Track II: Episodic Accretion Deviation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d0f; color: #ddd; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; padding: 1vh 1vw; }
+  #root { width: 100%; max-width: 1000px; height: 100%; max-height: 900px; display: flex; flex-direction: column; }
+  h1 { font-size: 16px; font-weight: 600; color: #eee; text-align: center; margin-bottom: 2px; flex-shrink: 0; }
+  .sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 10px; flex-shrink: 0; }
+
+  /* Telemetry Panel */
+  .tele { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; flex-shrink: 0; }
+  .tel { background: #15151a; border: 1px solid #2a2a35; border-radius: 8px; padding: 8px 12px; text-align: center; }
+  .tel-lbl { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+  .tel-val { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .highlight-dev { color: #E24B4A; text-shadow: 0 0 8px rgba(226, 75, 74, 0.4); }
+
+  /* Visualizer (Black Holes) */
+  .univs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; height: 20vh; min-height: 140px; flex-shrink: 0; }
+  .univ-wrap { position: relative; background: #000; border: 1px solid #2a2a35; border-radius: 8px; overflow: hidden; }
+  .univ-badge { position: absolute; top: 6px; left: 6px; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 5px; z-index: 2; }
+  .badge-a { background: rgba(128,128,128,.18); color: #aaa; border: 1px solid #777; }
+  .badge-b { background: rgba(24,95,165,.18); color: #378ADD; border: 1px solid #378ADD; }
+  canvas.univ { display: block; width: 100%; height: 100%; }
+
+  /* Graph */
+  .graph-wrap { background: #15151a; border: 1px solid #2a2a35; border-radius: 8px; padding: 10px; margin-bottom: 10px; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .chart-container { position: relative; flex: 1; min-height: 0; width: 100%; }
+  canvas#graph { display: block; width: 100%; height: 100%; }
+
+  /* Controls */
+  .controls { background: #15151a; border: 1px solid #2a2a35; border-radius: 8px; padding: 12px 16px; flex-shrink: 0; }
+  .timeline-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .timeline-row label { font-size: 11px; color: #666; white-space: nowrap; }
+  #timeline { flex: 1; height: 4px; accent-color: #378ADD; cursor: pointer; }
+  .frame-lbl { font-size: 11px; color: #888; min-width: 80px; text-align: right; font-variant-numeric: tabular-nums; }
+  .btn-row { display: flex; justify-content: center; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button { font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 6px; border: 1px solid #333; background: #1e1e28; color: #ddd; cursor: pointer; transition: 0.15s; }
+  button:hover { background: #2a2a38; border-color: #555; }
+  button.active { background: #1a3a5c; border-color: #378ADD; color: #7ec8ff; }
+</style>
+</head>
+<body>
+<div id="root">
+  <h1>BHU Track II · Empirical Cross-Match Deviation</h1>
+  <div class="sub">Cosmological Limits: Episodic Duty Cycle (10⁻⁵) & Physical Starvation</div>
+
+  <div class="tele">
+    <div class="tel">
+      <div class="tel-lbl">Redshift z</div>
+      <div class="tel-val" id="tel-z" style="color:#fff">15.00</div>
+    </div>
+    <div class="tel">
+      <div class="tel-lbl">Theoretical Mass (M_sun)</div>
+      <div class="tel-val" id="tel-m-bhu" style="color:#378ADD">1.00e+4</div>
+    </div>
+    <div class="tel">
+      <div class="tel-lbl">Host Gas Remaining</div>
+      <div class="tel-val" id="tel-gas" style="color:#4caf50">100.0%</div>
+    </div>
+    <div class="tel">
+      <div class="tel-lbl">JWST Cross-Match Error</div>
+      <div class="tel-val highlight-dev" id="tel-dev">N/A</div>
+    </div>
+  </div>
+
+  <div class="univs">
+    <div class="univ-wrap">
+      <div class="univ-badge badge-a">Standard Limit</div>
+      <canvas id="canvas-std" class="univ"></canvas>
+    </div>
+    <div class="univ-wrap">
+      <div class="univ-badge badge-b">BHU Episodic Framework</div>
+      <canvas id="canvas-bhu" class="univ"></canvas>
+    </div>
+  </div>
+
+  <div class="graph-wrap">
+    <div class="chart-container">
+      <canvas id="graph"></canvas>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="timeline-row">
+      <label>Cosmic Time</label>
+      <input type="range" id="timeline" min="0" max="199" value="0" step="1">
+      <span class="frame-lbl" id="frame-lbl">t = 271 Myr</span>
+    </div>
+    <div class="btn-row">
+      <button id="btn-reset">&#8635; Reset</button>
+      <button id="btn-play" class="active">&#9646;&#9646; Pause</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// --- Physics Integrator ---
+const Z_START = 15.0;
+const Z_END = 4.0;
+const FRAMES = 200;
+
+function zToAgeYr(z) {
+    const H0 = 67.4 * 3.24078e-20; 
+    const Om = 0.315;
+    const Ol = 0.685;
+    const a = 1.0 / (1.0 + z);
+    const term = Math.sqrt(Ol / Om) * Math.pow(a, 1.5);
+    const t_sec = (2.0 / (3.0 * H0 * Math.sqrt(Ol))) * Math.log(term + Math.sqrt(1.0 + term * term));
+    return t_sec / (365.25 * 24 * 3600);
+}
+
+function ageToZ(target_t) {
+    let z_low = 0, z_high = 30;
+    for(let i=0; i<30; i++){
+        let z_mid = (z_low + z_high)/2;
+        if(zToAgeYr(z_mid) < target_t) z_high = z_mid;
+        else z_low = z_mid;
+    }
+    return (z_low + z_high)/2;
+}
+
+const t_seed = zToAgeYr(Z_START);
+const t_end = zToAgeYr(Z_END);
+const dt_frame = (t_end - t_seed) / (FRAMES - 1);
+
+const jwst_data = [
+  {z: 10.0, m: 8e5},
+  {z: 8.5, m: 2e6},
+  {z: 6.5, m: 3e7},
+  {z: 4.5, m: 5e8}
+];
+
+const z_array = [];
+const m_bhu_array = [];
+const m_std_array = [];
+const gas_array = [];
+const age_array = [];
+
+let M_bh = 1e4;
+let M_gas = 4e9;
+let M_std = 1e4;
+
+// Macroscopic Parameters (Genesis Strategy)
+const mdot_peak = 800.0;
+const duty_cycle = 100.0 / 30e6; 
+const t_Edd = 450e6;
+const mass_loading = 18.0;
+
+let r_tr = Math.max(1.0, 6.75 * mdot_peak);
+let eta = 0.057 * (Math.log(r_tr) / (2.0 * mdot_peak)) * 1.3;
+eta = Math.max(1e-4, Math.min(eta, 0.057));
+
+for (let f = 0; f < FRAMES; f++) {
+    let current_t = t_seed + f * dt_frame;
+    z_array.push(ageToZ(current_t));
+    age_array.push(current_t);
+    m_bhu_array.push(M_bh);
+    m_std_array.push(M_std);
+    gas_array.push(M_gas);
+
+    let dt = dt_frame / 100;
+    for(let s = 0; s < 100; s++) {
+        let gas_frac = Math.max(0, M_gas / 4e9);
+        let mdot_eff = mdot_peak * duty_cycle * gas_frac;
+        let dM_dt = ((1.0 - eta) / eta) * (mdot_eff * M_bh / t_Edd);
+        
+        let dM_gas_dt = 0;
+        if (M_gas > 1e3) {
+            dM_gas_dt = -dM_dt * (1.0 + mass_loading);
+        } else {
+            dM_dt = 0; // Absolute Starvation
+        }
+
+        M_bh += dM_dt * dt;
+        M_gas += dM_gas_dt * dt;
+        
+        let dM_std = (M_std / 45e6) * 0.1;
+        M_std += dM_std * dt;
+    }
+}
+
+// --- Visualizer (Black Holes) ---
+function drawCanvas(id, mass, color, isEating, frameCount) {
+  const cv = document.getElementById(id);
+  const ctx = cv.getContext("2d");
+  const W = cv.width = cv.offsetWidth;
+  const H = cv.height = cv.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+  
+  const logMass = Math.log10(mass);
+  const minLog = 4;
+  const maxLog = 9;
+  const normalized = Math.max(0.01, (logMass - minLog) / (maxLog - minLog));
+  const maxRadius = Math.min(W, H) / 2.5;
+  const r = Math.max(2, normalized * maxRadius);
+
+  ctx.beginPath();
+  ctx.arc(W/2, H/2, r, 0, 2*Math.PI);
+  ctx.fillStyle = color;
+  ctx.fill();
+  
+  if (isEating) {
+      const pulse = 15 + Math.sin(frameCount * 0.5) * 5;
+      ctx.shadowBlur = pulse;
+      ctx.shadowColor = color;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+  } else {
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#555';
+      ctx.stroke();
+  }
+}
+
+// --- Chart Setup (Strict Linear Axis) ---
+const graphCtx = document.getElementById("graph").getContext("2d");
+const chart = new Chart(graphCtx, {
+  type: "scatter", // Force global scatter to mandate strict X/Y pairs
+  data: {
+    datasets: [
+      { label: "Standard Limit", data: [], borderColor: "#777", borderDash: [5,5], borderWidth: 2, pointRadius: 0, showLine: true },
+      { label: "BHU Episodic Framework", data: [], borderColor: "#378ADD", borderWidth: 3, pointRadius: 0, showLine: true },
+      { label: "JWST LRDs", data: jwst_data.map(d => ({x: d.z, y: d.m})), 
+        backgroundColor: '#E24B4A', pointRadius: 6, showLine: false }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    scales: {
+      x: { 
+          type: 'linear', // Mandate physical scaling
+          reverse: true, 
+          min: 3.5,
+          max: 15.5,
+          title: { display: true, text: 'Redshift z', color: '#888', font:{weight:'bold'} }, 
+          ticks: { color: '#888' }, 
+          grid: {color: '#2a2a35'} 
+      },
+      y: { 
+          type: 'logarithmic', 
+          min: 5e3, 
+          max: 5e9, 
+          title: { display: true, text: 'Black Hole Mass (M_sun)', color: '#888', font:{weight:'bold'} }, 
+          ticks: { color: '#888' }, 
+          grid: { color: '#2a2a35' } 
+      }
+    },
+    plugins: { 
+        legend: { labels: {color: '#ccc'} }
+    }
+  }
+});
+
+// --- State and Animation ---
+let frame = 0;
+let playing = true;
+let raf;
+let animationTicker = 0;
+
+function render(f) {
+  frame = f;
+  animationTicker++;
+  
+  const z = z_array[f];
+  const mBhu = m_bhu_array[f];
+  const mStd = m_std_array[f];
+  const gas = gas_array[f];
+  const age = age_array[f];
+
+  document.getElementById("tel-z").textContent = z.toFixed(2);
+  document.getElementById("tel-m-bhu").textContent = mBhu.toExponential(2);
+  
+  const gasPct = Math.max(0, (gas / 4e9) * 100);
+  document.getElementById("tel-gas").textContent = gasPct.toFixed(1) + "%";
+  if(gasPct <= 0.1) {
+      document.getElementById("tel-gas").style.color = "#777";
+  } else {
+      document.getElementById("tel-gas").style.color = "#4caf50";
+  }
+  
+  let devText = "N/A";
+  let closest_j = jwst_data.find(d => Math.abs(d.z - z) <= 0.4); 
+  if(closest_j) {
+      let dev = Math.abs(mBhu - closest_j.m) / closest_j.m * 100;
+      devText = dev.toFixed(2) + " %";
+  }
+  document.getElementById("tel-dev").textContent = devText;
+
+  const isEating = gasPct > 0.1;
+  drawCanvas("canvas-std", mStd, "#777", false, animationTicker);
+  drawCanvas("canvas-bhu", mBhu, "#378ADD", isEating, animationTicker);
+
+  const liveStd = [];
+  const liveBhu = [];
+  for(let i=0; i<=f; i++) { 
+      liveStd.push({x: z_array[i], y: m_std_array[i]}); 
+      liveBhu.push({x: z_array[i], y: m_bhu_array[i]}); 
+  }
+  
+  chart.data.datasets[0].data = liveStd;
+  chart.data.datasets[1].data = liveBhu;
+  chart.update("none");
+  
+  document.getElementById("timeline").value = f;
+  document.getElementById("frame-lbl").textContent = `t = ${(age/1e6).toFixed(0)} Myr`;
+}
+
+function tick() {
+  if (!playing) return;
+  if (frame < FRAMES - 1) {
+    render(frame + 1);
+    raf = requestAnimationFrame(tick);
+  } else {
+    playing = false;
+    document.getElementById("btn-play").innerHTML = "&#9654; Play";
+    document.getElementById("btn-play").classList.remove("active");
+  }
+}
+
+document.getElementById("btn-play").addEventListener("click", (e) => {
+  playing = !playing;
+  if(playing) {
+    if(frame >= FRAMES-1) render(0);
+    e.target.innerHTML = "&#9646;&#9646; Pause";
+    e.target.classList.add("active");
+    tick();
+  } else {
+    e.target.innerHTML = "&#9654; Play";
+    e.target.classList.remove("active");
+  }
+});
+
+document.getElementById("btn-reset").addEventListener("click", () => {
+  playing = false;
+  document.getElementById("btn-play").innerHTML = "&#9654; Play";
+  document.getElementById("btn-play").classList.remove("active");
+  render(0);
+});
+
+document.getElementById("timeline").addEventListener("input", (e) => {
+  playing = false;
+  document.getElementById("btn-play").innerHTML = "&#9654; Play";
+  document.getElementById("btn-play").classList.remove("active");
+  render(parseInt(e.target.value));
+});
+
+render(0);
+if(playing) tick();
+</script>
+</body>
+</html>
