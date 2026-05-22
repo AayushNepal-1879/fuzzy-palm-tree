@@ -1,2 +1,6 @@
 python -m http.server 8080
 fuser -k 8080/tcp
+
+git add .
+git commit -m "Your commit message here"
+git push
