@@ -9,7 +9,9 @@ H_desi = np.array([69.0, 80.5, 90.0, 99.0, 115.5, 150.1, 224.6])
 
 # Empirical Engine
 def get_H_emp(z):
-    return np.interp(z, z_desi[::-1], H_desi[::-1])
+    # z_desi is already in ascending order. np.interp requires strictly increasing x-values.
+    # To handle z < 0.10, we allow it to flatline at H=69.0, or you can append z=0 to the arrays.
+    return np.interp(z, z_desi, H_desi)
 
 # Theoretical Engine (BHU Super-Eddington)
 def get_H_theory(z):
