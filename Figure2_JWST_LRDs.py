@@ -110,9 +110,8 @@ ax.grid(True, linestyle="--", alpha=0.5, which="both")
 ax.legend(fontsize=12, loc="lower left")
 
 plt.tight_layout()
-out_path = os.path.join(OUT, "Figure2_Episodic_Growth.png")
-plt.savefig(out_path, bbox_inches="tight", dpi=300)
-plt.close(fig)
+out_path = os.path.join(OUT, "Figure2_Episodic_Growth.pdf")
+plt.savefig(out_path, bbox_inches="tight")   # no dpi needed — PDF is vector by default
 
 print("=" * 50)
 print(f"SUCCESS: Physical Episodic curve generated -> {out_path}")

@@ -11,7 +11,7 @@ Run:
     python Figure1_CrossMatch_Deviation.py
 
 Output:
-    output/Figure1_CrossMatch_Deviation.png
+    output/Figure1_CrossMatch_Deviation.pdf
 
 ACCURACY HIERARCHY (most → least accurate):
 ─────────────────────────────────────────────────────────────────────
@@ -247,9 +247,8 @@ plt.tight_layout()
 # ============================================================
 # 6. SAVE
 # ============================================================
-out_path = os.path.join(OUT, "Figure1_CrossMatch_Deviation.png")
-plt.savefig(out_path, bbox_inches="tight", dpi=300)
-plt.close(fig)
+out_path = os.path.join(OUT, "Figure1_CrossMatch_Deviation.pdf")
+plt.savefig(out_path, bbox_inches="tight")   # no dpi needed — PDF is vector by default
 
 print(f"\nSaved  \u2192  {out_path}")
 print("Open the 'output/' folder in the file explorer to view.")
